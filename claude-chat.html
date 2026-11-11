@@ -1,0 +1,1268 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" href="data:," />
+    <title>Claude Chat — Keyless</title>
+    <style>
+      :root {
+        --bg: #faf9f6;
+        --bg-soft: #f1efe9;
+        --surface: #ffffff;
+        --surface-2: #f5f3ee;
+        --ink: #1f1d1a;
+        --ink-2: #57534b;
+        --ink-3: #8a857a;
+        --line: #e3e0d7;
+        --accent: #bc5633;
+        --accent-ink: #a34a2b;
+        --accent-soft: #f7e8e1;
+        --user-bubble: #bc5633;
+        --user-ink: #ffffff;
+        --danger: #b3261e;
+        --ok: #2e7d32;
+        --code-bg: #26241f;
+        --code-ink: #f3efe6;
+        --shadow: 0 12px 40px rgba(31, 29, 26, 0.16);
+        --radius: 14px;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #191817;
+          --bg-soft: #211f1e;
+          --surface: #262423;
+          --surface-2: #2e2b29;
+          --ink: #ece9e2;
+          --ink-2: #b8b2a6;
+          --ink-3: #8a857a;
+          --line: #3a3733;
+          --accent: #d97757;
+          --accent-ink: #e08a6d;
+          --accent-soft: #3d2b23;
+          --user-bubble: #b4552f;
+          --code-bg: #121110;
+          --code-ink: #f3efe6;
+          --shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+        }
+      }
+      * { box-sizing: border-box; }
+      html, body { height: 100%; }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font: 16px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        display: flex;
+        flex-direction: column;
+        height: 100dvh;
+      }
+      button, select, input, textarea { font: inherit; color: inherit; }
+      button, select, summary, input:not([type="checkbox"]) { min-height: 2.25rem; }
+      button { cursor: pointer; }
+      :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+      /* ---------- Header ---------- */
+      header {
+        flex: 0 0 auto;
+        background: var(--surface);
+        border-bottom: 1px solid var(--line);
+        padding: 0.5rem 0.9rem;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.5rem 0.7rem;
+        z-index: 30;
+      }
+      .brand { display: flex; align-items: baseline; gap: 0.55rem; margin-right: auto; }
+      .brand h1 { font-size: 1.06rem; margin: 0; font-weight: 650; letter-spacing: -0.01em; }
+      .brand .tag {
+        font-size: 0.72rem; font-weight: 600; color: var(--accent-ink);
+        background: var(--accent-soft); border-radius: 999px; padding: 0.14rem 0.55rem;
+        white-space: nowrap;
+      }
+      .picker { display: flex; gap: 0.45rem; align-items: center; flex-wrap: wrap; }
+      .picker label { font-size: 0.78rem; color: var(--ink-2); font-weight: 600; }
+      select {
+        background: var(--surface-2); border: 1px solid var(--line); border-radius: 9px;
+        padding: 0.3rem 0.5rem; max-width: 46vw;
+      }
+      .hbtn {
+        display: inline-flex; align-items: center; gap: 0.4rem;
+        background: var(--surface-2); border: 1px solid var(--line); border-radius: 9px;
+        padding: 0.35rem 0.7rem; font-size: 0.88rem; font-weight: 550;
+      }
+      .hbtn:hover { border-color: var(--accent); }
+      .hbtn svg { width: 16px; height: 16px; flex: 0 0 auto; }
+      .hbtn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+      .hbtn.danger:hover { border-color: var(--danger); color: var(--danger); }
+      .hbtn .count {
+        background: var(--accent); color: #fff; border-radius: 999px;
+        font-size: 0.7rem; font-weight: 700; padding: 0.02rem 0.42rem;
+      }
+
+      /* ---------- Note strip ---------- */
+      .notestrip {
+        flex: 0 0 auto; display: flex; gap: 0.6rem; align-items: flex-start;
+        background: var(--accent-soft); color: var(--ink);
+        padding: 0.5rem 0.9rem; font-size: 0.84rem; border-bottom: 1px solid var(--line);
+      }
+      .notestrip p { margin: 0; }
+      .notestrip button {
+        margin-left: auto; background: none; border: 0; min-height: 1.8rem; min-width: 2.2rem;
+        font-size: 1rem; color: var(--ink-2); flex: 0 0 auto;
+      }
+
+      /* ---------- Chat ---------- */
+      main { flex: 1 1 auto; overflow-y: auto; overscroll-behavior: contain; }
+      .col { max-width: 840px; margin: 0 auto; padding: 1.1rem 1rem 1.6rem; }
+      .empty { text-align: center; padding: 3.2rem 1rem 1rem; color: var(--ink-2); }
+      .empty h2 { color: var(--ink); font-size: 1.45rem; margin: 0 0 0.4rem; font-weight: 650; letter-spacing: -0.01em; }
+      .empty p { margin: 0 auto 1.2rem; max-width: 34rem; }
+      .chips { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; }
+      .chip {
+        background: var(--surface); border: 1px solid var(--line); border-radius: 999px;
+        padding: 0.45rem 0.85rem; font-size: 0.88rem; text-align: left;
+      }
+      .chip:hover { border-color: var(--accent); color: var(--accent-ink); }
+      .msg { display: flex; gap: 0.65rem; margin: 0 0 1.15rem; }
+      .msg .avatar {
+        flex: 0 0 auto; width: 30px; height: 30px; border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 0.72rem; font-weight: 700; margin-top: 0.15rem;
+      }
+      .msg.user { flex-direction: row-reverse; }
+      .msg.user .avatar { background: var(--surface-2); color: var(--ink-2); border: 1px solid var(--line); }
+      .msg.bot .avatar { background: var(--accent); color: #fff; }
+      .bubble {
+        max-width: min(78%, 640px); border-radius: var(--radius); padding: 0.65rem 0.9rem;
+        overflow-wrap: anywhere; white-space: normal;
+      }
+      .msg.user .bubble { background: var(--user-bubble); color: var(--user-ink); border-bottom-right-radius: 4px; }
+      .msg.bot .bubble { background: var(--surface); border: 1px solid var(--line); border-bottom-left-radius: 4px; }
+      .bubble p { margin: 0 0 0.55rem; }
+      .bubble p:last-child { margin-bottom: 0; }
+      .bubble ul, .bubble ol { margin: 0.2rem 0 0.6rem; padding-left: 1.3rem; }
+      .bubble li { margin: 0.15rem 0; }
+      .bubble code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.86em;
+        background: var(--bg-soft); border-radius: 5px; padding: 0.08rem 0.32rem;
+      }
+      .msg.user .bubble code { background: rgba(255,255,255,0.18); }
+      .bubble pre {
+        background: var(--code-bg); color: var(--code-ink); border-radius: 10px;
+        padding: 0.7rem 0.85rem; overflow-x: auto; margin: 0.4rem 0 0.6rem;
+      }
+      .bubble pre code { background: none; padding: 0; color: inherit; }
+      .bubble a { color: var(--accent-ink); }
+      .msg.user .bubble a { color: #ffe1d3; }
+      .bubble img.att, .bubble video.att {
+        display: block; max-width: 100%; max-height: 320px; border-radius: 10px; margin: 0.3rem 0;
+      }
+      .filechip {
+        display: inline-flex; align-items: center; gap: 0.45rem; margin: 0.25rem 0.35rem 0.25rem 0;
+        background: var(--bg-soft); border: 1px solid var(--line); border-radius: 9px;
+        padding: 0.35rem 0.6rem; font-size: 0.82rem; color: var(--ink);
+      }
+      .msg.user .filechip { background: rgba(255,255,255,0.15); border-color: transparent; color: #fff; }
+      .filechip svg { width: 15px; height: 15px; }
+      .meta { font-size: 0.72rem; color: var(--ink-3); margin-top: 0.35rem; }
+      .msg.user .meta { text-align: right; color: rgba(255,255,255,0.75); }
+      .msg.bot .meta { color: var(--ink-3); }
+      .bubble.error { border-color: var(--danger); }
+      .bubble .errtext { color: var(--danger); }
+      .retrybtn {
+        margin-top: 0.5rem; background: var(--surface-2); border: 1px solid var(--line);
+        border-radius: 8px; padding: 0.3rem 0.7rem; font-size: 0.85rem; font-weight: 550;
+      }
+      .typing { display: inline-flex; align-items: center; gap: 0.5rem; color: var(--ink-2); font-size: 0.9rem; }
+      .dots span {
+        display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+        background: var(--accent); margin-right: 3px; animation: blink 1.2s infinite;
+      }
+      .dots span:nth-child(2) { animation-delay: 0.2s; }
+      .dots span:nth-child(3) { animation-delay: 0.4s; }
+      @keyframes blink { 0%, 80%, 100% { opacity: 0.25; } 40% { opacity: 1; } }
+      @media (prefers-reduced-motion: reduce) { .dots span { animation: none; } }
+
+      /* ---------- Composer ---------- */
+      footer {
+        flex: 0 0 auto; background: var(--surface); border-top: 1px solid var(--line);
+        padding: 0.6rem 0.9rem calc(0.6rem + env(safe-area-inset-bottom));
+      }
+      .composer { max-width: 840px; margin: 0 auto; }
+      .pending { display: none; flex-wrap: wrap; gap: 0.45rem; margin-bottom: 0.55rem; }
+      .pending.show { display: flex; }
+      .pend {
+        display: inline-flex; align-items: center; gap: 0.45rem; font-size: 0.82rem;
+        background: var(--surface-2); border: 1px solid var(--line); border-radius: 9px; padding: 0.3rem 0.35rem 0.3rem 0.6rem;
+      }
+      .pend img { width: 30px; height: 30px; object-fit: cover; border-radius: 6px; }
+      .pend button { background: none; border: 0; min-height: 1.9rem; min-width: 1.9rem; font-size: 0.95rem; color: var(--ink-2); }
+      .pend .st { color: var(--ink-3); font-size: 0.75rem; }
+      .row { display: flex; gap: 0.5rem; align-items: flex-end; }
+      .iconbtn {
+        flex: 0 0 auto; width: 42px; height: 42px; border-radius: 11px;
+        background: var(--surface-2); border: 1px solid var(--line);
+        display: inline-flex; align-items: center; justify-content: center;
+      }
+      .iconbtn:hover { border-color: var(--accent); color: var(--accent-ink); }
+      .iconbtn svg { width: 19px; height: 19px; }
+      textarea#input {
+        flex: 1 1 auto; resize: none; max-height: 150px; min-height: 42px;
+        border: 1px solid var(--line); border-radius: 11px; background: var(--bg);
+        padding: 0.6rem 0.8rem;
+      }
+      #sendBtn {
+        flex: 0 0 auto; height: 42px; border-radius: 11px; border: 0;
+        background: var(--accent); color: #fff; font-weight: 650; padding: 0 1.1rem;
+        display: inline-flex; align-items: center; gap: 0.4rem;
+      }
+      #sendBtn:disabled { opacity: 0.55; cursor: default; }
+      #sendBtn.stop { background: var(--danger); }
+      .hint { font-size: 0.75rem; color: var(--ink-3); margin: 0.45rem 0 0; text-align: center; }
+
+      /* ---------- Drawers ---------- */
+      .scrim {
+        position: fixed; inset: 0; background: rgba(20, 18, 15, 0.45);
+        opacity: 0; pointer-events: none; transition: opacity 0.2s; z-index: 40;
+      }
+      .scrim.open { opacity: 1; pointer-events: auto; }
+      .drawer {
+        position: fixed; top: 0; right: 0; height: 100dvh; width: min(430px, 100vw);
+        background: var(--surface); z-index: 50; box-shadow: var(--shadow);
+        transform: translateX(105%); visibility: hidden;
+        transition: transform 0.22s ease, visibility 0s linear 0.22s;
+        display: flex; flex-direction: column;
+      }
+      .drawer.open { transform: none; visibility: visible; transition: transform 0.22s ease; }
+      @media (prefers-reduced-motion: reduce) { .drawer, .scrim { transition: none; } }
+      .drawer header {
+        border-bottom: 1px solid var(--line); padding: 0.8rem 1rem;
+        display: flex; align-items: center; gap: 0.5rem;
+      }
+      .drawer header h2 { font-size: 1.02rem; margin: 0; flex: 1; }
+      .drawer .body { overflow-y: auto; padding: 1rem; flex: 1; }
+      .drawer h3 { font-size: 0.86rem; margin: 1.1rem 0 0.5rem; color: var(--ink-2); text-transform: uppercase; letter-spacing: 0.05em; }
+      .drawer h3:first-child { margin-top: 0; }
+      .drawer p.small { font-size: 0.85rem; color: var(--ink-2); margin: 0.3rem 0 0.7rem; }
+      .card {
+        border: 1px solid var(--line); border-radius: 12px; padding: 0.75rem 0.85rem; margin-bottom: 0.6rem;
+        background: var(--surface);
+      }
+      .card .top { display: flex; align-items: center; gap: 0.6rem; }
+      .card .name { font-weight: 650; flex: 1; overflow-wrap: anywhere; }
+      .card .desc { font-size: 0.83rem; color: var(--ink-2); margin-top: 0.25rem; overflow-wrap: anywhere; }
+      .card .val { font-size: 0.78rem; color: var(--ink-3); font-family: ui-monospace, Menlo, Consolas, monospace; overflow-wrap: anywhere; margin-top: 0.2rem; }
+      .card .actions { display: flex; gap: 0.45rem; margin-top: 0.55rem; flex-wrap: wrap; }
+      .smallbtn {
+        background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px;
+        padding: 0.28rem 0.65rem; font-size: 0.83rem; font-weight: 550;
+      }
+      .smallbtn:hover { border-color: var(--accent); }
+      .smallbtn.danger:hover { border-color: var(--danger); color: var(--danger); }
+      .testres { font-size: 0.82rem; margin-top: 0.45rem; }
+      .testres.ok { color: var(--ok); }
+      .testres.bad { color: var(--danger); }
+      /* toggle switch */
+      .switch { position: relative; display: inline-block; width: 46px; height: 27px; flex: 0 0 auto; }
+      .switch input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+      .switch .track {
+        position: absolute; inset: 0; border-radius: 999px; background: var(--line); transition: background 0.15s; pointer-events: none;
+      }
+      .switch .track::after {
+        content: ""; position: absolute; top: 3px; left: 3px; width: 21px; height: 21px;
+        border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.3); transition: left 0.15s;
+      }
+      .switch input:checked + .track { background: var(--accent); }
+      .switch input:checked + .track::after { left: 22px; }
+      .switch input:focus-visible + .track { outline: 2px solid var(--accent); outline-offset: 2px; }
+      /* form */
+      .field { margin-bottom: 0.7rem; }
+      .field label { display: block; font-size: 0.83rem; font-weight: 600; margin-bottom: 0.3rem; }
+      .field input, .field select {
+        width: 100%; border: 1px solid var(--line); border-radius: 9px; background: var(--bg);
+        padding: 0.45rem 0.6rem;
+      }
+      .bigbtn {
+        width: 100%; background: var(--accent); color: #fff; border: 0; border-radius: 10px;
+        padding: 0.55rem; font-weight: 650;
+      }
+      .bigbtn.ghost { background: var(--surface-2); color: var(--ink); border: 1px solid var(--line); }
+      .notebox {
+        background: var(--accent-soft); border-radius: 10px; padding: 0.65rem 0.8rem;
+        font-size: 0.84rem; margin-top: 0.9rem;
+      }
+      .notebox ul { margin: 0.35rem 0 0; padding-left: 1.15rem; }
+      .toast {
+        position: fixed; left: 50%; bottom: 5.2rem; transform: translateX(-50%) translateY(20px);
+        background: var(--ink); color: var(--bg); padding: 0.55rem 1rem; border-radius: 10px;
+        font-size: 0.88rem; opacity: 0; pointer-events: none; transition: all 0.2s; z-index: 80;
+        max-width: 92vw; text-align: center;
+      }
+      .toast.show { opacity: 1; transform: translateX(-50%); }
+      .sr { display: none !important; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="brand">
+        <h1>Claude Chat</h1>
+        <span class="tag">Keyless · GitHub Pages</span>
+      </div>
+      <div class="picker">
+        <label for="providerSel">Provider</label>
+        <select id="providerSel" aria-label="Provider"></select>
+        <label for="modelSel">Model</label>
+        <select id="modelSel" aria-label="Model"></select>
+        <button class="hbtn" id="puterSignIn" type="button" hidden>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5"/></svg>
+          Puter sign-in
+        </button>
+      </div>
+      <button class="hbtn" id="skillsBtn" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2.4 4.9 5.4.8-3.9 3.8 1 5.4-4.9-2.6-4.9 2.6 1-5.4L4.2 7.7l5.4-.8z"/></svg>
+        Skills <span class="count" id="skillsCount" hidden>0</span>
+      </button>
+      <button class="hbtn" id="connBtn" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 17H7a5 5 0 0 1 0-10h2M15 7h2a5 5 0 0 1 0 10h-2M8 12h8"/></svg>
+        Connectors <span class="count" id="connCount" hidden>0</span>
+      </button>
+      <button class="hbtn danger" id="clearBtn" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v6M14 11v6"/></svg>
+        Clear chat
+      </button>
+    </header>
+
+    <div class="notestrip" id="noteStrip">
+      <p><strong>Note:</strong> Ye static (GitHub Pages) version hai — yahan sirf keyless models chalte hain. <strong>Claude (NaraRouter) chat, Instagram connect aur Video banao</strong> jaise features ko server/machine chahiye, isliye wo sirf <strong>full Claude Chat site</strong> par milenge. Yahan koi fake button nahi rakha gaya hai.</p>
+      <button type="button" id="noteClose" aria-label="Note band karo">✕</button>
+    </div>
+
+    <main id="scroll">
+      <div class="col" id="chatCol">
+        <div class="empty" id="emptyState">
+          <h2>Namaste! Kuch bhi puchho</h2>
+          <p>Main hamesha <strong>Hinglish</strong> me jawab dunga. Koi API key nahi chahiye — upar se provider aur model chuno aur baat shuru karo. Photo, video ya file (PDF, Word, Excel) attach karke us par bhi sawal puchh sakte ho.</p>
+          <div class="chips">
+            <button class="chip" type="button" data-q="GST return filing kya hoti hai, simple shabdon me samjhao">GST return filing samjhao</button>
+            <button class="chip" type="button" data-q="Tally Prime me sales invoice kaise banate hain, step by step batao">Tally me sales invoice kaise bane?</button>
+            <button class="chip" type="button" data-q="Ek professional email likho: vendor ko payment follow-up ke liye">Vendor ko payment follow-up email likho</button>
+            <button class="chip" type="button" data-q="TDS kya hota hai aur salary par kab katta hai?">TDS kya hota hai?</button>
+          </div>
+        </div>
+        <div id="messages"></div>
+      </div>
+    </main>
+
+    <footer>
+      <div class="composer">
+        <div class="pending" id="pendingRow"></div>
+        <div class="row">
+          <button class="iconbtn" id="mediaBtn" type="button" title="Photo / video attach karo" aria-label="Photo ya video attach karo">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg>
+          </button>
+          <button class="iconbtn" id="fileBtn" type="button" title="File attach karo (PDF, Word, Excel, text, CSV — 10 MB tak)" aria-label="File attach karo">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.5l-8.5 8.5a5.5 5.5 0 0 1-7.8-7.8L13 5a3.7 3.7 0 0 1 5.2 5.2l-8.2 8.2a1.85 1.85 0 0 1-2.6-2.6L15 8.5"/></svg>
+          </button>
+          <textarea id="input" rows="1" placeholder="Message likho… (Enter = bhejo, Shift+Enter = nayi line)"></textarea>
+          <button id="sendBtn" type="button">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg>
+            Bhejo
+          </button>
+        </div>
+        <p class="hint">Sab kuch tumhare browser me hi rehta hai — chat, skills aur connectors isi device par save hote hain. Koi key nahi, koi apna server nahi.</p>
+      </div>
+    </footer>
+
+    <input class="sr" type="file" id="mediaInput" accept="image/*,video/*" multiple />
+    <input class="sr" type="file" id="fileInput" accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.md,.json" />
+    <input class="sr" type="file" id="skillInput" accept=".zip" />
+
+    <div class="scrim" id="scrim"></div>
+
+    <!-- Skills drawer -->
+    <aside class="drawer" id="skillsDrawer" aria-label="Skills panel">
+      <header>
+        <h2>Skills</h2>
+        <button class="hbtn" type="button" data-close aria-label="Band karo">✕</button>
+      </header>
+      <div class="body">
+        <p class="small">Skill ek ZIP file hoti hai jisme <strong>SKILL.md</strong> hota hai. Upload karne par skill ke instructions har jawab me use honge (jab ON ho). Skills isi browser me save rehti hain.</p>
+        <button class="bigbtn" id="skillUploadBtn" type="button">Skill ZIP upload karo</button>
+        <h3>Tumhari skills</h3>
+        <div id="skillsList"></div>
+        <div class="notebox">
+          Skill ON hone par uske instructions system prompt me jud jate hain — jaise koi khaas format, style ya workflow har jawab me follow hoga.
+        </div>
+      </div>
+    </aside>
+
+    <!-- Connectors drawer -->
+    <aside class="drawer" id="connDrawer" aria-label="Connectors panel">
+      <header>
+        <h2>Connectors</h2>
+        <button class="hbtn" type="button" data-close aria-label="Band karo">✕</button>
+      </header>
+      <div class="body">
+        <p class="small">Apne custom connectors yahan save karo. Ye sirf isi browser me rehte hain. URL wale connector ka <strong>Test connection</strong> bhi yahin se ho jayega.</p>
+        <h3>Naya connector</h3>
+        <form id="connForm">
+          <div class="field">
+            <label for="connName">Naam</label>
+            <input id="connName" type="text" placeholder="e.g. Meri GST API" required />
+          </div>
+          <div class="field">
+            <label for="connType">Type</label>
+            <select id="connType">
+              <option value="api">REST API (URL)</option>
+              <option value="webhook">Webhook (URL)</option>
+              <option value="command">Command</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="connValue" id="connValueLabel">URL</label>
+            <input id="connValue" type="text" placeholder="https://example.com/api" required />
+          </div>
+          <button class="bigbtn" type="submit">Connector save karo</button>
+        </form>
+        <h3>Saved connectors</h3>
+        <div id="connList"></div>
+        <div class="notebox">
+          <strong>Full site par milne wale connectors:</strong>
+          <ul>
+            <li>Instagram connect — server login chahiye, static page par nahi chal sakta.</li>
+            <li>Command wale connectors test/run karna — machine access chahiye.</li>
+          </ul>
+        </div>
+      </div>
+    </aside>
+
+    <div class="toast" id="toast" role="status"></div>
+
+    <script src="https://js.puter.com/v2/"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script>
+      "use strict";
+      /* ================= Config ================= */
+      var PROVIDERS = {
+        puter: {
+          label: "Puter (free sign-in, no key)",
+          models: [
+            { id: "claude-sonnet-4-5", label: "Claude Sonnet 4.5" },
+            { id: "gpt-5.1", label: "GPT-5.1" },
+            { id: "gpt-4o", label: "GPT-4o" },
+            { id: "gemini-2.5-flash", label: "Gemini 2.5 Flash" },
+            { id: "gemini-2.5-pro", label: "Gemini 2.5 Pro" },
+            { id: "grok-4", label: "Grok 4" },
+            { id: "deepseek-chat", label: "DeepSeek Chat" },
+            { id: "deepseek-reasoner", label: "DeepSeek Reasoner" }
+          ]
+        },
+        llm7: {
+          label: "LLM7 (no key)",
+          base: "https://api.llm7.io/v1/chat/completions",
+          key: "unused",
+          models: [
+            { id: "gpt-oss:20b", label: "GPT-OSS 20B" },
+            { id: "mistral-Nemo-Instruct-2407", label: "Mistral Nemo" },
+            { id: "codestral-latest", label: "Codestral (code)" }
+          ]
+        },
+        zen: {
+          label: "OpenCode Zen (no key)",
+          base: "https://opencode.ai/zen/v1/chat/completions",
+          models: [
+            { id: "big-pickle", label: "Big Pickle (free)" },
+            { id: "deepseek-v4.1-flash-free", label: "DeepSeek V4.1 Flash (free)" },
+            { id: "mimo-v2.6-flash-free", label: "MiMo V2.6 Flash (free)" },
+            { id: "glm-5.3-flash-free", label: "GLM-5.3 Flash (free)" },
+            { id: "longcat-2.5-free", label: "LongCat 2.5 (free)" },
+            { id: "minimax-m3.1-flash-free", label: "MiniMax M3.1 Flash (free)" },
+            { id: "inkling-2-small-free", label: "Inkling 2 Small (free)" },
+            { id: "nemotron-3.5-lightning-free", label: "Nemotron 3.5 Lightning (free)" }
+          ]
+        },
+        pollinations: {
+          label: "Pollinations (no key)",
+          base: "https://text.pollinations.ai/openai",
+          models: [
+            { id: "openai-fast", label: "OpenAI Fast (GPT-OSS 20B)" }
+          ]
+        }
+      };
+      var BASE_SYSTEM =
+        "Tum ek helpful AI assistant ho jo ek static web page se chal raha hai. " +
+        "SABSE ZAROORI NIYAM: Hamesha Hinglish me jawab do — matlab Hindi bhasha, lekin Roman (Latin) script me likhi hui, jaise dost se chat kar rahe ho. " +
+        "User kisi bhi bhasha me likhe (English, Hindi Devanagari, ya kuch aur), tumhara jawab hamesha Hinglish (Roman Hindi) me hi hona chahiye. " +
+        "Technical terms, code aur proper naam English me reh sakte hain. Jawab saaf, madadgaar aur sahi rakho. " +
+        "Agar user koi file attach kare to usi file ke content ke aadhar par jawab do aur jahan zaroori ho file ki details (numbers, naam, tariq) quote karo.";
+
+      /* ================= State + storage ================= */
+      var LS = { chat: "cc_chat_v1", skills: "cc_skills_v1", conn: "cc_conn_v1", sel: "cc_sel_v1", note: "cc_note_v1" };
+      function lsGet(k, dflt) { try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : dflt; } catch (e) { return dflt; } }
+      function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); return true; } catch (e) { return false; } }
+
+      var messages = lsGet(LS.chat, []);          // {role, text, model?, ts, media:[], files:[{name,size,text}]}
+      var skills = lsGet(LS.skills, []);          // {id, name, desc, content, on}
+      var connectors = lsGet(LS.conn, []);        // {id, name, type, value}
+      var pending = [];                            // attachments waiting to send
+      var busy = false, abortCtl = null, lastFailed = null;
+
+      var $ = function (id) { return document.getElementById(id); };
+      var els = {
+        provider: $("providerSel"), model: $("modelSel"), signin: $("puterSignIn"),
+        messages: $("messages"), empty: $("emptyState"), scroll: $("scroll"),
+        input: $("input"), send: $("sendBtn"), pendingRow: $("pendingRow"),
+        mediaInput: $("mediaInput"), fileInput: $("fileInput"), skillInput: $("skillInput"),
+        skillsList: $("skillsList"), connList: $("connList"), toast: $("toast"),
+        skillsCount: $("skillsCount"), connCount: $("connCount")
+      };
+
+      function toast(msg) {
+        els.toast.textContent = msg;
+        els.toast.classList.add("show");
+        clearTimeout(toast._t);
+        toast._t = setTimeout(function () { els.toast.classList.remove("show"); }, 3200);
+      }
+      function fmtSize(n) {
+        if (n < 1024) return n + " B";
+        if (n < 1048576) return (n / 1024).toFixed(1) + " KB";
+        return (n / 1048576).toFixed(1) + " MB";
+      }
+      function fmtTime(ts) {
+        try { return new Date(ts).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" }); } catch (e) { return ""; }
+      }
+
+      /* ================= Markdown (safe mini renderer) ================= */
+      function esc(s) {
+        return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+      }
+      function inlineMd(s) {
+        s = esc(s);
+        s = s.replace(/`([^`]+)`/g, "<code>$1</code>");
+        s = s.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+        s = s.replace(/(^|[^*])\*([^*\n]+)\*/g, "$1<em>$2</em>");
+        s = s.replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+        return s;
+      }
+      function md(text) {
+        var lines = String(text || "").split("\n"), out = [], i = 0, listType = null;
+        function closeList() { if (listType) { out.push(listType === "ul" ? "</ul>" : "</ol>"); listType = null; } }
+        while (i < lines.length) {
+          var line = lines[i];
+          if (/^```/.test(line)) {
+            closeList();
+            var buf = [];
+            i++;
+            while (i < lines.length && !/^```/.test(lines[i])) { buf.push(lines[i]); i++; }
+            i++;
+            out.push("<pre><code>" + esc(buf.join("\n")) + "</code></pre>");
+            continue;
+          }
+          var h = line.match(/^(#{1,4})\s+(.*)$/);
+          if (h) { closeList(); out.push("<p><strong>" + inlineMd(h[2]) + "</strong></p>"); i++; continue; }
+          var ul = line.match(/^\s*[-•]\s+(.*)$/);
+          var ol = line.match(/^\s*\d+[.)]\s+(.*)$/);
+          if (ul || ol) {
+            var t = ul ? "ul" : "ol";
+            if (listType !== t) { closeList(); out.push(t === "ul" ? "<ul>" : "<ol>"); listType = t; }
+            out.push("<li>" + inlineMd((ul || ol)[1]) + "</li>");
+            i++; continue;
+          }
+          if (!line.trim()) { closeList(); i++; continue; }
+          closeList();
+          out.push("<p>" + inlineMd(line) + "</p>");
+          i++;
+        }
+        closeList();
+        return out.join("");
+      }
+
+      /* ================= Rendering ================= */
+      function fileChipSvg() {
+        return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>';
+      }
+      function mediaHtml(m) {
+        if (m.kind === "image" && m.data) return '<img class="att" src="' + m.data + '" alt="' + esc(m.name || "attached photo") + '" />';
+        if (m.kind === "video" && m.data) return '<video class="att" src="' + m.data + '" controls playsinline></video>';
+        if (m.kind === "video") return '<span class="filechip">' + fileChipSvg() + esc(m.name || "video") + ' <span>(badi file — sirf is session me)</span></span>';
+        return "";
+      }
+      function renderMessage(msg) {
+        var wrap = document.createElement("div");
+        wrap.className = "msg " + (msg.role === "user" ? "user" : "bot");
+        var av = document.createElement("div");
+        av.className = "avatar";
+        av.textContent = msg.role === "user" ? "You" : "AI";
+        var bub = document.createElement("div");
+        bub.className = "bubble";
+        var html = "";
+        (msg.media || []).forEach(function (m) { html += mediaHtml(m); });
+        (msg.files || []).forEach(function (f) {
+          html += '<span class="filechip">' + fileChipSvg() + esc(f.name) + " · " + fmtSize(f.size || 0) + "</span>";
+        });
+        if (msg.role === "user") html += "<p>" + esc(msg.text || "").replace(/\n/g, "<br>") + "</p>";
+        else html += md(msg.text || "");
+        var meta = "";
+        if (msg.model) meta += esc(msg.model) + " · ";
+        meta += fmtTime(msg.ts || Date.now());
+        html += '<div class="meta">' + meta + "</div>";
+        bub.innerHTML = html;
+        wrap.appendChild(av); wrap.appendChild(bub);
+        els.messages.appendChild(wrap);
+        return bub;
+      }
+      function renderAll() {
+        els.messages.innerHTML = "";
+        messages.forEach(renderMessage);
+        els.empty.style.display = messages.length ? "none" : "";
+        scrollDown();
+      }
+      function scrollDown() { els.scroll.scrollTop = els.scroll.scrollHeight; }
+
+      function saveChat() {
+        if (lsSet(LS.chat, messages)) return;
+        // Quota full: media data hata kar dobara try karo
+        var slim = messages.map(function (m) {
+          var c = Object.assign({}, m);
+          c.media = (m.media || []).map(function (x) { return { kind: x.kind, name: x.name }; });
+          return c;
+        });
+        if (!lsSet(LS.chat, slim)) {
+          lsSet(LS.chat, slim.slice(-30));
+        }
+      }
+
+      /* ================= Provider / model picker ================= */
+      function fillProviders() {
+        els.provider.innerHTML = "";
+        Object.keys(PROVIDERS).forEach(function (k) {
+          var o = document.createElement("option");
+          o.value = k; o.textContent = PROVIDERS[k].label;
+          els.provider.appendChild(o);
+        });
+        var saved = lsGet(LS.sel, null);
+        if (saved && PROVIDERS[saved.p]) els.provider.value = saved.p;
+        fillModels();
+        if (saved && PROVIDERS[els.provider.value].models.some(function (m) { return m.id === saved.m; })) {
+          els.model.value = saved.m;
+        }
+        updateSignin();
+      }
+      function fillModels() {
+        var p = PROVIDERS[els.provider.value];
+        els.model.innerHTML = "";
+        p.models.forEach(function (m) {
+          var o = document.createElement("option");
+          o.value = m.id; o.textContent = m.label;
+          els.model.appendChild(o);
+        });
+      }
+      function updateSignin() { els.signin.hidden = els.provider.value !== "puter"; }
+      function saveSel() { lsSet(LS.sel, { p: els.provider.value, m: els.model.value }); }
+      els.provider.addEventListener("change", function () { fillModels(); updateSignin(); saveSel(); });
+      els.model.addEventListener("change", saveSel);
+      els.signin.addEventListener("click", function () {
+        if (typeof puter === "undefined") { toast("Puter SDK load nahi hua — net check karke page refresh karo."); return; }
+        puter.auth.signIn().then(function () { toast("Puter sign-in ho gaya."); }).catch(function () { toast("Sign-in cancel ya fail ho gaya."); });
+      });
+
+      /* ================= System instructions: Hinglish + skills ================= */
+      function buildSystemText() {
+        var s = BASE_SYSTEM;
+        var active = skills.filter(function (sk) { return sk.on; });
+        if (active.length) {
+          s += "\n\n--- ACTIVE SKILLS ---\nNeeche di gayi skills ON hain. Inke instructions ko har jawab me follow karo:";
+          active.forEach(function (sk) {
+            s += "\n\n### Skill: " + sk.name + "\n" + sk.content;
+          });
+        }
+        if (connectors.length) {
+          s += "\n\n--- USER KE SAVED CONNECTORS (sirf reference) ---\n" +
+            connectors.map(function (c) { return "- " + c.name + " (" + c.type + "): " + c.value; }).join("\n") +
+            "\nNote: Ye connectors is static page se directly call nahi hote; agar user puche to unhe inke baare me bata sakte ho.";
+        }
+        return s;
+      }
+
+      /* ================= API message building ================= */
+      function buildApiMessages(newUserMsg) {
+        var api = [{ role: "system", content: buildSystemText() }];
+        var hist = messages.slice(-16);
+        hist.forEach(function (m) {
+          if (m === newUserMsg) return;
+          api.push({ role: m.role === "user" ? "user" : "assistant", content: m.text || "" });
+        });
+        var content = newUserMsg.text || "";
+        (newUserMsg.files || []).forEach(function (f) {
+          content += "\n\n===== ATTACHED FILE: " + f.name + " =====\n" + (f.text || "(content padha nahi gaya)") + "\n===== FILE KHATAM =====";
+        });
+        var imgs = (newUserMsg.media || []).filter(function (m) { return m.kind === "image" && m.data; });
+        if (imgs.length && els.provider.value === "puter") {
+          var parts = [{ type: "text", text: content }];
+          imgs.forEach(function (m) { parts.push({ type: "image_url", image_url: { url: m.data } }); });
+          api.push({ role: "user", content: parts });
+        } else {
+          if (imgs.length) content += "\n(Note: user ne " + imgs.length + " photo attach ki hai, lekin is provider ka model photo nahi dekh sakta — ye baat user ko bata do agar zaroori ho.)";
+          api.push({ role: "user", content: content });
+        }
+        return api;
+      }
+
+      function extractContent(j) {
+        try {
+          var c = j.choices && j.choices[0] && j.choices[0].message;
+          if (!c) return "";
+          if (typeof c.content === "string" && c.content.trim()) return c.content;
+          if (c.reasoning_content) return c.reasoning_content;
+          if (c.reasoning) return typeof c.reasoning === "string" ? c.reasoning : "";
+          return "";
+        } catch (e) { return ""; }
+      }
+      function errText(j, status) {
+        if (j && j.error) {
+          var e = j.error;
+          if (typeof e === "string") return e;
+          if (e.message) return e.message;
+        }
+        if (j && j.message) return j.message;
+        return "HTTP " + status;
+      }
+
+      /* ================= Provider calls ================= */
+      function callOpenAIStyle(cfg, apiMsgs, onChunk, signal) {
+        return fetch(cfg.base, {
+          method: "POST",
+          signal: signal,
+          headers: Object.assign({ "Content-Type": "application/json" }, cfg.key ? { "Authorization": "Bearer " + cfg.key } : {}),
+          body: JSON.stringify({ model: els.model.value, messages: apiMsgs, stream: true, max_tokens: 3000 })
+        }).then(function (res) {
+          if (!res.ok) {
+            return res.text().then(function (t) {
+              var j = null; try { j = JSON.parse(t); } catch (e) {}
+              throw new Error(errText(j, res.status));
+            });
+          }
+          if (!res.body || !res.body.getReader) {
+            return res.json().then(function (j) { var t = extractContent(j); onChunk(t); return t; });
+          }
+          var reader = res.body.getReader(), dec = new TextDecoder(), buf = "", full = "";
+          function pump() {
+            return reader.read().then(function (r) {
+              if (r.done) return full;
+              buf += dec.decode(r.value, { stream: true });
+              var parts = buf.split("\n");
+              buf = parts.pop();
+              parts.forEach(function (line) {
+                line = line.trim();
+                if (line.indexOf("data:") !== 0) return;
+                var data = line.slice(5).trim();
+                if (data === "[DONE]") return;
+                try {
+                  var j = JSON.parse(data);
+                  var d = j.choices && j.choices[0] && j.choices[0].delta;
+                  var piece = "";
+                  if (d) piece = d.content || d.reasoning_content || "";
+                  if (piece) { full += piece; onChunk(full); }
+                } catch (e) {}
+              });
+              return pump();
+            });
+          }
+          return pump();
+        });
+      }
+
+      function callPuter(apiMsgs, onChunk, signal) {
+        if (typeof puter === "undefined" || !puter.ai || !puter.ai.chat) {
+          return Promise.reject(new Error("Puter SDK load nahi hua. Net check karke page refresh karo, ya doosra provider chuno."));
+        }
+        var aborted = false;
+        if (signal) signal.addEventListener("abort", function () { aborted = true; });
+        var full = "";
+        var p;
+        try {
+          p = puter.ai.chat(apiMsgs, { model: els.model.value, stream: true });
+        } catch (e) {
+          return Promise.reject(e);
+        }
+        return Promise.resolve(p).then(function (resp) {
+          if (resp && typeof resp[Symbol.asyncIterator] === "function") {
+            var it = resp[Symbol.asyncIterator]();
+            function next() {
+              if (aborted) throw new Error("AbortError");
+              return it.next().then(function (r) {
+                if (r.done) return full;
+                var piece = "";
+                if (r.value) piece = r.value.text || (typeof r.value === "string" ? r.value : "");
+                if (piece) { full += piece; onChunk(full); }
+                return next();
+              });
+            }
+            return next();
+          }
+          var txt = "";
+          if (resp && resp.message && resp.message.content) {
+            txt = typeof resp.message.content === "string" ? resp.message.content
+              : (resp.message.content[0] && resp.message.content[0].text) || "";
+          } else if (resp && typeof resp.toString === "function") {
+            txt = resp.toString();
+          }
+          onChunk(txt);
+          return txt;
+        });
+      }
+
+      /* ================= Send flow ================= */
+      function setBusy(b) {
+        busy = b;
+        els.send.innerHTML = b
+          ? "■ Roko"
+          : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg> Bhejo';
+        els.send.classList.toggle("stop", b);
+      }
+      els.send.addEventListener("click", function () {
+        if (busy) { if (abortCtl) abortCtl.abort(); return; }
+        doSend();
+      });
+      els.input.addEventListener("keydown", function (e) {
+        if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); if (!busy) doSend(); }
+      });
+      els.input.addEventListener("input", function () {
+        els.input.style.height = "auto";
+        els.input.style.height = Math.min(150, els.input.scrollHeight) + "px";
+      });
+      document.querySelectorAll(".chip").forEach(function (c) {
+        c.addEventListener("click", function () { els.input.value = c.getAttribute("data-q"); doSend(); });
+      });
+
+      function doSend() {
+        var text = els.input.value.trim();
+        if (!text && !pending.length) { toast("Pehle kuch likho ya file/photo attach karo."); return; }
+        var userMsg = {
+          role: "user",
+          text: text,
+          ts: Date.now(),
+          media: pending.filter(function (p) { return p.kind === "image" || p.kind === "video"; })
+            .map(function (p) { return { kind: p.kind, name: p.name, data: p.data || null }; }),
+          files: pending.filter(function (p) { return p.kind === "file"; })
+            .map(function (p) { return { name: p.name, size: p.size, text: p.text || "" }; })
+        };
+        pending = [];
+        renderPending();
+        els.input.value = "";
+        els.input.style.height = "auto";
+        messages.push(userMsg);
+        els.empty.style.display = "none";
+        renderMessage(userMsg);
+        saveChat();
+        runBot(userMsg);
+      }
+
+      function runBot(userMsg) {
+        setBusy(true);
+        var started = Date.now();
+        var bub = renderMessage({ role: "assistant", text: "", ts: Date.now() });
+        bub.innerHTML = '<span class="typing"><span class="dots"><span></span><span></span><span></span></span><span class="tsec">Jawab aa raha hai… 0s</span></span>';
+        scrollDown();
+        var tEl = bub.querySelector(".tsec");
+        var timer = setInterval(function () {
+          if (tEl) tEl.textContent = "Jawab aa raha hai… " + Math.round((Date.now() - started) / 1000) + "s";
+        }, 500);
+        abortCtl = ("AbortController" in window) ? new AbortController() : null;
+        var idleTimer = null;
+        function armIdle() {
+          clearTimeout(idleTimer);
+          idleTimer = setTimeout(function () { if (abortCtl) abortCtl.abort(); }, 120000);
+        }
+        armIdle();
+        var apiMsgs = buildApiMessages(userMsg);
+        var pk = els.provider.value, cfg = PROVIDERS[pk];
+        var modelLabel = pk + " · " + els.model.value;
+        var got = "";
+        function onChunk(full) { got = full; bub.innerHTML = md(full); scrollDown(); armIdle(); }
+
+        var call = pk === "puter"
+          ? callPuter(apiMsgs, onChunk, abortCtl ? abortCtl.signal : null)
+          : callOpenAIStyle(cfg, apiMsgs, onChunk, abortCtl ? abortCtl.signal : undefined);
+
+        call.then(function (full) {
+          clearInterval(timer); clearTimeout(idleTimer);
+          var finalText = (full && full.trim()) ? full : got;
+          if (!finalText || !finalText.trim()) throw new Error("Model ne khaali jawab diya. Dobara try karo ya model badlo.");
+          bub.innerHTML = md(finalText) + '<div class="meta">' + esc(modelLabel) + " · " + fmtTime(Date.now()) + "</div>";
+          messages.push({ role: "assistant", text: finalText, model: modelLabel, ts: Date.now(), media: [], files: [] });
+          saveChat();
+          lastFailed = null;
+        }).catch(function (err) {
+          clearInterval(timer); clearTimeout(idleTimer);
+          var stopped = err && (err.name === "AbortError" || String(err.message) === "AbortError");
+          if (stopped && got && got.trim()) {
+            bub.innerHTML = md(got) + '<div class="meta">' + esc(modelLabel) + " · roka gaya</div>";
+            messages.push({ role: "assistant", text: got, model: modelLabel, ts: Date.now(), media: [], files: [] });
+            saveChat();
+            lastFailed = null;
+          } else {
+            var reason = stopped ? "Jawab beech me ruk gaya (timeout ya Stop)." : (err && err.message ? err.message : "Network error");
+            bub.classList.add("error");
+            bub.innerHTML = '<p class="errtext"><strong>Jawab nahi aaya.</strong></p><p>' + esc(reason) + '</p>' +
+              '<p>Doosra provider/model try karo — Puter aksar sabse reliable rehta hai.</p>' +
+              '<button class="retrybtn" type="button">Phir se try karo</button>';
+            bub.querySelector(".retrybtn").addEventListener("click", function () {
+              bub.parentElement.remove();
+              runBot(userMsg);
+            });
+            lastFailed = userMsg;
+          }
+        }).then(function () {
+          setBusy(false);
+          abortCtl = null;
+          scrollDown();
+        });
+      }
+
+      /* ================= Attachments ================= */
+      function renderPending() {
+        els.pendingRow.innerHTML = "";
+        els.pendingRow.classList.toggle("show", pending.length > 0);
+        pending.forEach(function (p, idx) {
+          var d = document.createElement("span");
+          d.className = "pend";
+          var inner = "";
+          if (p.kind === "image" && p.data) inner += '<img src="' + p.data + '" alt="" />';
+          inner += "<span>" + esc(p.name) + "</span>";
+          if (p.status) inner += '<span class="st">' + esc(p.status) + "</span>";
+          inner += '<button type="button" aria-label="Hatao">✕</button>';
+          d.innerHTML = inner;
+          d.querySelector("button").addEventListener("click", function () { pending.splice(idx, 1); renderPending(); });
+          els.pendingRow.appendChild(d);
+        });
+      }
+      function downscaleImage(file) {
+        return new Promise(function (resolve) {
+          var url = URL.createObjectURL(file);
+          var img = new Image();
+          img.onload = function () {
+            var max = 1280, w = img.naturalWidth, h = img.naturalHeight;
+            var scale = Math.min(1, max / Math.max(w, h));
+            var cw = Math.round(w * scale), ch = Math.round(h * scale);
+            var cv = document.createElement("canvas");
+            cv.width = cw; cv.height = ch;
+            cv.getContext("2d").drawImage(img, 0, 0, cw, ch);
+            URL.revokeObjectURL(url);
+            resolve(cv.toDataURL("image/jpeg", 0.85));
+          };
+          img.onerror = function () { URL.revokeObjectURL(url); resolve(null); };
+          img.src = url;
+        });
+      }
+      function readAs(file, mode) {
+        return new Promise(function (resolve, reject) {
+          var r = new FileReader();
+          r.onload = function () { resolve(r.result); };
+          r.onerror = reject;
+          if (mode === "dataURL") r.readAsDataURL(file);
+          else if (mode === "arrayBuffer") r.readAsArrayBuffer(file);
+          else r.readAsText(file);
+        });
+      }
+      $("mediaBtn").addEventListener("click", function () { els.mediaInput.click(); });
+      $("fileBtn").addEventListener("click", function () { els.fileInput.click(); });
+
+      els.mediaInput.addEventListener("change", function () {
+        var files = Array.prototype.slice.call(els.mediaInput.files || []);
+        els.mediaInput.value = "";
+        files.forEach(function (f) {
+          if (f.size > 25 * 1048576) { toast("'" + f.name + "' 25 MB se badi hai — skip ki gayi."); return; }
+          if (f.type.indexOf("image/") === 0) {
+            downscaleImage(f).then(function (data) {
+              if (data) { pending.push({ kind: "image", name: f.name, data: data }); renderPending(); }
+              else toast("Photo padh nahi paya: " + f.name);
+            });
+          } else if (f.type.indexOf("video/") === 0) {
+            if (f.size <= 3.5 * 1048576) {
+              readAs(f, "dataURL").then(function (data) {
+                pending.push({ kind: "video", name: f.name, data: data }); renderPending();
+              });
+            } else {
+              pending.push({ kind: "video", name: f.name, data: URL.createObjectURL(f), status: "badi file — sirf is session me dikhegi" });
+              renderPending();
+            }
+          } else {
+            toast("Ye file type media me nahi chalega: " + f.name);
+          }
+        });
+      });
+
+      var MAXFILE = 10 * 1048576, MAXTEXT = 12000;
+      els.fileInput.addEventListener("change", function () {
+        var f = els.fileInput.files && els.fileInput.files[0];
+        els.fileInput.value = "";
+        if (!f) return;
+        if (f.size > MAXFILE) { toast("File 10 MB se badi hai — chhoti file chuno."); return; }
+        var item = { kind: "file", name: f.name, size: f.size, text: "", status: "padh raha hai…" };
+        pending.push(item);
+        renderPending();
+        extractFileText(f).then(function (txt) {
+          item.text = txt.length > MAXTEXT ? txt.slice(0, MAXTEXT) + "\n…(file bohot lambi thi, pehla hissa hi bheja gaya)" : txt;
+          item.status = item.text ? fmtSize(f.size) + " · taiyaar" : "content nahi mila";
+          renderPending();
+          if (!item.text) toast("'" + f.name + "' se text nahi nikal paya.");
+        }).catch(function () {
+          item.status = "padh nahi paya";
+          renderPending();
+          toast("'" + f.name + "' padhne me error aaya.");
+        });
+      });
+
+      function extractFileText(f) {
+        var ext = (f.name.split(".").pop() || "").toLowerCase();
+        if (ext === "txt" || ext === "md" || ext === "csv" || ext === "json") {
+          return readAs(f, "text").then(function (t) { return String(t); });
+        }
+        if (ext === "pdf") {
+          if (typeof pdfjsLib === "undefined") return Promise.reject(new Error("pdf lib"));
+          pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+          return readAs(f, "arrayBuffer").then(function (ab) {
+            return pdfjsLib.getDocument({ data: ab }).promise;
+          }).then(function (pdf) {
+            var pages = [];
+            var chain = Promise.resolve();
+            var n = Math.min(pdf.numPages, 30);
+            var self = this;
+            for (var i = 1; i <= n; i++) {
+              (function (pg) {
+                chain = chain.then(function () {
+                  return pdf.getPage(pg).then(function (page) {
+                    return page.getTextContent();
+                  }).then(function (tc) {
+                    pages.push(tc.items.map(function (it) { return it.str; }).join(" "));
+                  });
+                });
+              })(i);
+            }
+            return chain.then(function () { return pages.join("\n"); });
+          });
+        }
+        if (ext === "docx") {
+          if (typeof mammoth === "undefined") return Promise.reject(new Error("mammoth lib"));
+          return readAs(f, "arrayBuffer").then(function (ab) {
+            return mammoth.extractRawText({ arrayBuffer: ab });
+          }).then(function (r) { return r.value || ""; });
+        }
+        if (ext === "doc") {
+          return Promise.reject(new Error("purana .doc format browser me nahi khulta — .docx me save karke bhejo"));
+        }
+        if (ext === "xlsx" || ext === "xls") {
+          if (typeof XLSX === "undefined") return Promise.reject(new Error("xlsx lib"));
+          return readAs(f, "arrayBuffer").then(function (ab) {
+            var wb = XLSX.read(new Uint8Array(ab), { type: "array" });
+            var out = [];
+            wb.SheetNames.forEach(function (name) {
+              out.push("--- Sheet: " + name + " ---");
+              out.push(XLSX.utils.sheet_to_csv(wb.Sheets[name]));
+            });
+            return out.join("\n");
+          });
+        }
+        return readAs(f, "text").then(function (t) { return String(t); });
+      }
+
+      /* ================= Skills ================= */
+      function saveSkills() { lsSet(LS.skills, skills); }
+      function renderSkills() {
+        els.skillsList.innerHTML = "";
+        var onCount = skills.filter(function (s) { return s.on; }).length;
+        els.skillsCount.hidden = onCount === 0;
+        els.skillsCount.textContent = onCount;
+        if (!skills.length) {
+          els.skillsList.innerHTML = '<p class="small">Abhi koi skill nahi hai. Upar se ZIP upload karo.</p>';
+          return;
+        }
+        skills.forEach(function (sk) {
+          var card = document.createElement("div");
+          card.className = "card";
+          card.innerHTML =
+            '<div class="top"><span class="name">' + esc(sk.name) + "</span>" +
+            '<label class="switch"><input type="checkbox" ' + (sk.on ? "checked" : "") + ' aria-label="Skill on/off"><span class="track"></span></label></div>' +
+            (sk.desc ? '<div class="desc">' + esc(sk.desc) + "</div>" : "") +
+            '<div class="actions"><button class="smallbtn danger" type="button">Remove</button></div>';
+          card.querySelector("input").addEventListener("change", function (e) {
+            sk.on = e.target.checked;
+            saveSkills(); renderSkills();
+            toast("Skill '" + sk.name + "' " + (sk.on ? "ON" : "OFF") + " ho gayi.");
+          });
+          card.querySelector(".smallbtn").addEventListener("click", function () {
+            skills = skills.filter(function (x) { return x.id !== sk.id; });
+            saveSkills(); renderSkills();
+            toast("Skill hata di gayi.");
+          });
+          els.skillsList.appendChild(card);
+        });
+      }
+      $("skillUploadBtn").addEventListener("click", function () { els.skillInput.click(); });
+      els.skillInput.addEventListener("change", function () {
+        var f = els.skillInput.files && els.skillInput.files[0];
+        els.skillInput.value = "";
+        if (!f) return;
+        if (typeof JSZip === "undefined") { toast("JSZip load nahi hua — net check karke refresh karo."); return; }
+        JSZip.loadAsync(f).then(function (zip) {
+          var entry = null;
+          zip.forEach(function (path, file) {
+            if (!entry && /(^|\/)SKILL\.md$/i.test(path) && !file.dir) entry = file;
+          });
+          if (!entry) throw new Error("ZIP me SKILL.md nahi mili.");
+          return entry.async("string");
+        }).then(function (content) {
+          var name = f.name.replace(/\.zip$/i, ""), desc = "";
+          var fm = content.match(/^---\s*\n([\s\S]*?)\n---/);
+          if (fm) {
+            var nm = fm[1].match(/^name:\s*(.+)$/m);
+            var dm = fm[1].match(/^description:\s*(.+)$/m);
+            if (nm) name = nm[1].trim().replace(/^["']|["']$/g, "");
+            if (dm) desc = dm[1].trim().replace(/^["']|["']$/g, "");
+          }
+          if (!desc) {
+            var bodyLine = content.replace(/^---[\s\S]*?---/, "").split("\n").map(function (l) { return l.replace(/^#+\s*/, "").trim(); }).filter(Boolean)[0];
+            desc = bodyLine ? bodyLine.slice(0, 140) : "";
+          }
+          skills.push({ id: "sk" + Date.now(), name: name, desc: desc, content: content, on: true });
+          saveSkills(); renderSkills();
+          toast("Skill '" + name + "' jud gayi aur ON hai.");
+        }).catch(function (e) {
+          toast("Skill upload fail: " + (e && e.message ? e.message : "ZIP khul nahi payi."));
+        });
+      });
+
+      /* ================= Connectors ================= */
+      var CONN_TYPES = { api: "REST API", webhook: "Webhook", command: "Command" };
+      function saveConn() { lsSet(LS.conn, connectors); }
+      function renderConn() {
+        els.connList.innerHTML = "";
+        els.connCount.hidden = connectors.length === 0;
+        els.connCount.textContent = connectors.length;
+        if (!connectors.length) {
+          els.connList.innerHTML = '<p class="small">Abhi koi connector save nahi hai.</p>';
+          return;
+        }
+        connectors.forEach(function (c) {
+          var card = document.createElement("div");
+          card.className = "card";
+          var isUrl = /^https?:\/\//i.test(c.value);
+          card.innerHTML =
+            '<div class="top"><span class="name">' + esc(c.name) + '</span><span class="tag" style="font-size:0.7rem;font-weight:600;color:var(--accent-ink);background:var(--accent-soft);border-radius:999px;padding:0.12rem 0.5rem;">' + esc(CONN_TYPES[c.type] || c.type) + "</span></div>" +
+            '<div class="val">' + esc(c.value) + "</div>" +
+            '<div class="actions">' +
+            (isUrl ? '<button class="smallbtn test" type="button">Test connection</button>' : "") +
+            '<button class="smallbtn danger del" type="button">Remove</button></div>' +
+            '<div class="testres" hidden></div>';
+          var delBtn = card.querySelector(".del");
+          delBtn.addEventListener("click", function () {
+            connectors = connectors.filter(function (x) { return x.id !== c.id; });
+            saveConn(); renderConn();
+            toast("Connector hata diya gaya.");
+          });
+          var testBtn = card.querySelector(".test");
+          if (testBtn) {
+            testBtn.addEventListener("click", function () {
+              var res = card.querySelector(".testres");
+              res.hidden = false;
+              res.className = "testres";
+              res.textContent = "Test ho raha hai…";
+              testBtn.disabled = true;
+              testUrl(c.value).then(function (r) {
+                res.className = "testres " + (r.ok ? "ok" : "bad");
+                res.textContent = r.text;
+              }).then(function () { testBtn.disabled = false; });
+            });
+          }
+          els.connList.appendChild(card);
+        });
+      }
+      function testUrl(url) {
+        var ctl = ("AbortController" in window) ? new AbortController() : null;
+        var to = setTimeout(function () { if (ctl) ctl.abort(); }, 10000);
+        return fetch(url, { method: "GET", signal: ctl ? ctl.signal : undefined })
+          .then(function (r) {
+            clearTimeout(to);
+            return { ok: true, text: "Connection OK — server ne jawab diya (HTTP " + r.status + ")." };
+          })
+          .catch(function () {
+            // CORS block ho sakta hai — no-cors se sirf reachability check
+            return fetch(url, { method: "GET", mode: "no-cors", signal: ctl ? ctl.signal : undefined })
+              .then(function () {
+                clearTimeout(to);
+                return { ok: true, text: "Server reachable hai (response CORS ki wajah se padh nahi paya, lekin site up hai)." };
+              })
+              .catch(function () {
+                clearTimeout(to);
+                return { ok: false, text: "Connection fail — URL galat hai ya server band/down hai." };
+              });
+          });
+      }
+      $("connForm").addEventListener("submit", function (e) {
+        e.preventDefault();
+        var name = $("connName").value.trim();
+        var type = $("connType").value;
+        var value = $("connValue").value.trim();
+        if (!name || !value) return;
+        if (type !== "command" && !/^https?:\/\//i.test(value)) {
+          toast("URL http:// ya https:// se shuru hona chahiye.");
+          return;
+        }
+        connectors.push({ id: "cn" + Date.now(), name: name, type: type, value: value });
+        saveConn(); renderConn();
+        $("connName").value = ""; $("connValue").value = "";
+        toast("Connector '" + name + "' save ho gaya.");
+      });
+      $("connType").addEventListener("change", function () {
+        var isCmd = $("connType").value === "command";
+        $("connValueLabel").textContent = isCmd ? "Command" : "URL";
+        $("connValue").placeholder = isCmd ? "e.g. python tools/report.py --daily" : "https://example.com/api";
+      });
+
+      /* ================= Drawers ================= */
+      var scrim = $("scrim");
+      function openDrawer(id) {
+        $(id).classList.add("open");
+        scrim.classList.add("open");
+      }
+      function closeDrawers() {
+        document.querySelectorAll(".drawer").forEach(function (d) { d.classList.remove("open"); });
+        scrim.classList.remove("open");
+      }
+      $("skillsBtn").addEventListener("click", function () { openDrawer("skillsDrawer"); });
+      $("connBtn").addEventListener("click", function () { openDrawer("connDrawer"); });
+      scrim.addEventListener("click", closeDrawers);
+      document.querySelectorAll("[data-close]").forEach(function (b) { b.addEventListener("click", closeDrawers); });
+      document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeDrawers(); });
+
+      /* ================= Clear + note ================= */
+      $("clearBtn").addEventListener("click", function () {
+        if (busy) { toast("Pehle jawab rukne do (Stop dabao)."); return; }
+        messages = [];
+        saveChat();
+        renderAll();
+        toast("Chat clear ho gayi. Skills aur connectors save rahe.");
+      });
+      if (lsGet(LS.note, false)) $("noteStrip").style.display = "none";
+      $("noteClose").addEventListener("click", function () {
+        $("noteStrip").style.display = "none";
+        lsSet(LS.note, true);
+      });
+
+      /* ================= Init ================= */
+      fillProviders();
+      renderAll();
+      renderSkills();
+      renderConn();
+      renderPending();
+      els.input.focus();
+    </script>
+  </body>
+</html>
